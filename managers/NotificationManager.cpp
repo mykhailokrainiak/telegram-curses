@@ -4,6 +4,7 @@
 #include <libnotify/notification.h>
 #include <libnotify/notify.h>
 #include <memory>
+#include <cstdlib>
 #include "GlobalParameters.hpp"
 #include "ChatManager.hpp"
 #include "TdObjectsOutput.h"
@@ -81,7 +82,7 @@ void NotificationManager::Notification::delete_notification() {
 }
 
 void NotificationManager::process_update(td::td_api::updateNotification &update) {
-  if (!global_parameters().notifications_enabled()) {
+  if (!desktop_notifications_enabled_ || !global_parameters().notifications_enabled()) {
     return;
   }
   NotificationId id;
@@ -94,7 +95,7 @@ void NotificationManager::process_update(td::td_api::updateNotification &update)
   it->second->process_update(*update.notification_);
 }
 void NotificationManager::process_update(td::td_api::updateNotificationGroup &update) {
-  if (!global_parameters().notifications_enabled()) {
+  if (!desktop_notifications_enabled_ || !global_parameters().notifications_enabled()) {
     return;
   }
   if (update.type_->get_id() != td::td_api::notificationGroupTypeMessages::ID) {
@@ -124,7 +125,8 @@ void NotificationManager::process_update(td::td_api::updateNotificationGroup &up
 }
 
 NotificationManager::NotificationManager() {
-  notify_init("telegram-curses");
+  desktop_notifications_enabled_ = std::getenv("TELEGRAM_CURSES_DISABLE_DESKTOP_NOTIFICATIONS") == nullptr;
+  if (desktop_notifications_enabled_) notify_init("telegram-curses");
 }
 
 NotificationManager &notification_manager() {

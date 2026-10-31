@@ -1,0 +1,31 @@
+diff --git a/src/lib/in.c b/src/lib/in.c
+index 43f768a..136024e 100644
+--- a/src/lib/in.c
++++ b/src/lib/in.c
+@@ -2557,8 +2557,10 @@ block_on_input(inputctx* ictx, unsigned* rtfd, unsigned* rifd){
+   int timeoutms = nonblock ? 0 : -1;
+   while((events = poll(pfds, pfdcount, timeoutms)) < 0){ // FIXME smask?
+ #else
+-  struct timespec ts = { .tv_sec = 0, .tv_nsec = 0, };
+-  struct timespec* pts = nonblock ? &ts : NULL;
++  // Some terminals never return the final device-attributes response.
++  // Finish initialization after an idle interval, using terminfo defaults.
++  struct timespec ts = { .tv_sec = nonblock ? 0 : 3, .tv_nsec = 0, };
++  struct timespec* pts = (nonblock || ictx->initdata) ? &ts : NULL;
+   while((events = ppoll(pfds, pfdcount, pts, &smask)) < 0){
+ #endif
+     if(errno == EINTR){
+@@ -2570,6 +2572,13 @@ block_on_input(inputctx* ictx, unsigned* rtfd, unsigned* rifd){
+     }
+   }
+   loginfo("poll returned %d", events);
++#if !defined(__APPLE__) && !defined(__MINGW32__)
++  if(events == 0 && !nonblock && ictx->initdata){
++    logwarn("terminal interrogation timed out; using available responses");
++    handoff_initial_responses_early(ictx);
++    handoff_initial_responses_late(ictx);
++  }
++#endif
+   pfdcount = 0;
+   while(events){
+     if(pfds[pfdcount].revents){

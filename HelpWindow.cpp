@@ -5,6 +5,7 @@ namespace tdcurses {
 void generate_help_info(Outputter &out) {
   out << "Key bindings:\n";
   out << "  Global:\n";
+  out << "    Tab               : switch between chats and conversation\n";
   out << "    C-r               : force refresh\n";
   out << "    C-a + [hjkl]      : change active window\n";
   out << "    q/C-q/Esc         : close the popup window and open the previous one\n";

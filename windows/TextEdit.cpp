@@ -592,10 +592,10 @@ td::int32 TextEdit::render(WindowOutputter &rb, td::int32 width, td::Slice text,
     actions.emplace_back(m->last_pos(), false, m);
   }
   if (is_selected) {
-    auto reverse_markup =
-        std::make_shared<MarkupElementReverse>(MarkupElementPos(0, 0), MarkupElementPos(text.size() + 1, 0), true);
-    actions.emplace_back(reverse_markup->first_pos(), true, reverse_markup);
-    actions.emplace_back(reverse_markup->last_pos(), false, reverse_markup);
+    auto selected_background = std::make_shared<MarkupElementBgColorRGB>(
+        MarkupElementPos(0, 0), MarkupElementPos(text.size() + 1, 0), ColorRGB(0x243d5a));
+    actions.emplace_back(selected_background->first_pos(), true, selected_background);
+    actions.emplace_back(selected_background->last_pos(), false, selected_background);
   }
 
   std::sort(actions.begin(), actions.end());

@@ -270,8 +270,8 @@ void DialogListWindow::set_search_pattern(std::string pattern) {
 
 void DialogListWindow::update_sublist(Sublist new_sublist) {
   cur_sublist_ = std::move(new_sublist);
-  cur_sublist_.visit(td::overloaded([&](const SublistGlobal &sublist) { set_title("global"); },
-                                    [&](const SublistArchive &sublist) { set_title("archive"); },
+  cur_sublist_.visit(td::overloaded([&](const SublistGlobal &sublist) { set_title("All chats"); },
+                                    [&](const SublistArchive &sublist) { set_title("Archived chats"); },
                                     [&](const SublistSublist &sublist) {
                                       auto &f = global_parameters().chat_folders();
                                       for (auto &s : f) {

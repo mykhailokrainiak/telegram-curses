@@ -36,6 +36,7 @@ class NotificationManager {
   void process_update(td::td_api::updateNotificationGroup &update);
 
  private:
+  bool desktop_notifications_enabled_{true};
   std::map<NotificationId, std::unique_ptr<Notification>> notifications_;
 };
 

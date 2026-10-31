@@ -12,11 +12,15 @@
 #include <jpeglib.h>
 #include <vector>
 #include <zlib.h>
+#ifndef _WIN32
+#include <sys/ioctl.h>
+#include <unistd.h>
+#endif
 
 namespace windows {
 
-std::vector<int> color_to_rgb{0x000000, 0xcc0403, 0x19cb00, 0xcecb00, 0x0d73cc, 0xcb1ed1, 0x0dcdcd, 0xdddddd,
-                              0x767676, 0xf2201f, 0x23fd00, 0xfffd00, 0x1a8fff, 0xfd28ff, 0x14ffff, 0xffffff};
+std::vector<int> color_to_rgb{0x0b1220, 0xbe5264, 0x65b891, 0xd2ac67, 0x668ed2, 0xa38acd, 0x67b8bd, 0xcbd5e1,
+                              0x71839b, 0xfb7185, 0x86efac, 0xfde68a, 0x93c5fd, 0xd8b4fe, 0x7dd3fc, 0xf1f5f9};
 
 class RenderedImageNotcurses : public RenderedImage {
  public:
@@ -830,7 +834,7 @@ void create_empty_window_outputter_notcurses(void *notcurses, void *baseplane, v
 std::unique_ptr<WindowOutputter> notcurses_window_outputter(void *notcurses, void *baseplane, void *renderplane,
                                                             td::int32 height, td::int32 width) {
   return std::make_unique<WindowOutputterNotcurses>((struct notcurses *)notcurses, (struct ncplane *)renderplane, 0, 0,
-                                                    height, width, 0xdddddd, 0x000000, true);
+                                                    height, width, 0xcbd5e1, 0x0b1220, true);
 }
 
 std::unique_ptr<InputEvent> parse_notcurses_input_event(td::int32 code, td::MutableCSlice utf8, bool alt, bool ctrl,
@@ -951,7 +955,8 @@ struct BackendNotcurses : public Backend {
         continue;
       }
 
-      if (ni.evtype != NCTYPE_PRESS && ni.evtype != NCTYPE_REPEAT) {
+      // Legacy terminal input has no explicit event type and represents a press.
+      if (ni.evtype != NCTYPE_UNKNOWN && ni.evtype != NCTYPE_PRESS && ni.evtype != NCTYPE_REPEAT) {
         continue;
       }
 
@@ -981,6 +986,20 @@ struct BackendNotcurses : public Backend {
   }
 
   void refresh(bool force, std::shared_ptr<Window> base_window) override {
+#ifndef _WIN32
+    struct winsize terminal_size {};
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminal_size) == 0 &&
+        terminal_size.ws_row >= 8 && terminal_size.ws_col >= 20 &&
+        (terminal_size.ws_row != height() || terminal_size.ws_col != width())) {
+      const auto old_height = height();
+      const auto old_width = width();
+      notcurses_refresh(nc_, nullptr, nullptr);
+      if (height() != old_height || width() != old_width) {
+        screen_->on_resize(height(), width());
+        return;
+      }
+    }
+#endif
     if (!force && (!base_window->need_refresh() || !base_window->need_refresh_at().is_in_past())) {
       return;
     }

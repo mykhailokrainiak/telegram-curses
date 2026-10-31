@@ -643,39 +643,29 @@ void PadWindow::render(WindowOutputter &rb, bool force) {
     td::CSlice text;
 
     td::StringBuilder sb;
-    sb << "↑";
-    if (glued_to_ == GluedTo::Top) {
-      sb << "glued";
-    } else {
-      sb << lines_over_window;
-    }
-    sb << " ";
-    sb << title() << "\n";
+    sb << " " << title();
+    if (lines_over_window > 0) sb << "  ↑" << lines_over_window;
+    sb << "\n";
     text = sb.as_cslice();
     TextEdit::render(
         rb, width(), text, 0,
         {std::make_shared<MarkupElementFgColor>(MarkupElementPos(0, 0), MarkupElementPos(text.size() + 1, 0),
                                                 Color::Grey),
          std::make_shared<MarkupElementNoLb>(MarkupElementPos(0, 0), MarkupElementPos(text.size(), 0), true)},
-        rb.is_active(), false);
+        false, false);
     sb.clear();
 
     rb.translate(height() - 1, 0);
-    sb << "↓";
-    if (glued_to_ == GluedTo::Bottom) {
-      sb << "glued";
-    } else {
-      sb << lines_under_window;
-    }
-    sb << " ";
-    sb << title() << "\n";
+    if (lines_under_window > 0) sb << " ↓ " << lines_under_window << " more below";
+    else sb << " Up/Down to browse";
+    sb << "\n";
     text = sb.as_cslice();
     TextEdit::render(
         rb, width(), text, 0,
         {std::make_shared<MarkupElementFgColor>(MarkupElementPos(0, 0), MarkupElementPos(text.size() + 1, 0),
                                                 Color::Grey),
          std::make_shared<MarkupElementNoLb>(MarkupElementPos(0, 0), MarkupElementPos(text.size(), 0), true)},
-        rb.is_active(), false);
+        false, false);
     rb.untranslate(height() - 1, 0);
   }
 

@@ -1,0 +1,7 @@
+*.sh text eol=lf
+*.patch text eol=lf
+*.md text eol=lf
+*.conf text eol=lf
+*.cmd text eol=crlf
+dist/linux-arm64/telegram-curses binary
+dist/linux-arm64/lib/* -text

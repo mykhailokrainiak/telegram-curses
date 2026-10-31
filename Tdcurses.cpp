@@ -2385,8 +2385,7 @@ void TdcursesImpl::update_status_line() {
   if (w) {
     Outputter out;
 
-    out << Color::Lime;
-    out << Outputter::BgColor{Color::Grey};
+    out << Color::Aqua << "  ";
 
     td::td_api::downcast_call(
         const_cast<td::td_api::ConnectionState &>(*global_parameters().connection_state()),
@@ -2396,34 +2395,21 @@ void TdcursesImpl::update_status_line() {
             [&](const td::td_api::connectionStateConnecting &state) { out << "connecting "; },
             [&](const td::td_api::connectionStateUpdating &state) { out << "updating "; },
             [&](const td::td_api::connectionStateWaitingForNetwork &state) { out << "waitnet "; }));
-    out << Outputter::Reverse(Outputter::ChangeBool::Enable) << " ";
+    out << Color::Grey << " | " << Color::Silver;
 
     if (unread_chats_) {
       out << Outputter::FgColor(Color::Red) << unread_chats_ << Outputter::FgColor(windows::Color::Revert);
     } else {
       out << unread_chats_;
     }
-    out << " unread " << Outputter::Reverse(Outputter::ChangeBool::Revert) << " ";
+    out << Color::Silver << " unread chats";
     auto ch = chat_window();
     if (ch) {
       auto info = chat_manager().get_chat(ch->main_chat_id());
       if (info) {
-        out << info->title() << " ";
+        out << Color::Grey << "  |  " << Color::Silver << info->title();
       }
     }
-    out << Outputter::Reverse(Outputter::ChangeBool::Enable) << " ";
-    if (ch) {
-      out << ch->text_mode() << " ";
-    }
-    out << Outputter::Reverse(Outputter::ChangeBool::Revert) << " ";
-    {
-      auto r = sysconf(_SC_CLK_TCK);
-      auto usr = (int)((double)relaxed_cpu_stat().process_user_ticks_ / (double)r);
-      auto sys = (int)((double)relaxed_cpu_stat().process_system_ticks_ / (double)r);
-
-      out << usr << "% " << sys << "%";
-    }
-    out << Outputter::Reverse(Outputter::ChangeBool::Enable) << " ";
     out << "\n";
     auto markup = out.markup();
     auto str = out.as_str();
@@ -2591,7 +2577,7 @@ int main(int argc, char **argv) {
   bool show_pixel_images = true;
 
   bool log_window_enabled = false;
-  td::int32 dialog_list_window_width = 10;
+  td::int32 dialog_list_window_width = 28;
   td::int32 log_window_height = 10;
   td::int32 compose_window_height = 10;
 

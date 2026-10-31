@@ -5,6 +5,7 @@
 #include "windows/BorderedWindow.hpp"
 #include "TdcursesWindowBase.hpp"
 #include "HelpWindow.hpp"
+#include "WelcomeWindow.hpp"
 #include "Debug.hpp"
 #include "settings-menu/MainSettingsWindow.hpp"
 #include "ChatInfoWindow.hpp"
@@ -20,7 +21,7 @@ class TdcursesLayout
   TdcursesLayout(Tdcurses *root, td::ActorId<Tdcurses> root_actor) : TdcursesWindowBase(root, std::move(root_actor)) {
     log_window_ = std::make_shared<windows::EmptyWindow>();
     dialog_list_window_ = std::make_shared<windows::EmptyWindow>();
-    chat_window_ = std::make_shared<windows::EmptyWindow>();
+    chat_window_ = std::make_shared<WelcomeWindow>();
     command_line_ = std::make_shared<windows::EmptyWindow>();
     status_line_ = std::make_shared<windows::EmptyWindow>();
 
@@ -58,27 +59,28 @@ class TdcursesLayout
   }
   void on_resize(td::int32 old_height, td::int32 old_width, td::int32 new_height, td::int32 new_width) override {
     auto h = log_window_enabled_ ? (td::int32)(height() * dialog_list_window_height_) : height();
-    auto w = (td::int32)(width() * dialog_list_window_width_);
-    h -= 2;
+    auto w = std::min(std::max(26, (td::int32)(width() * dialog_list_window_width_)), std::max(1, width() / 2));
+    w = std::min(w, 50);
+    h = std::max(3, h - 4);
     dialog_list_window_->resize(h, w);
-    dialog_list_window_->move_yx(0, 0);
+    dialog_list_window_->move_yx(2, 0);
     if (!compose_window_) {
       chat_window_->resize(h, width() - 1 - w);
-      chat_window_->move_yx(0, w + 1);
+      chat_window_->move_yx(2, w + 1);
     } else {
-      auto h2 = (td::int32)(height() * chat_window_height_);
+      auto h2 = std::max(1, std::min(h - 2, (td::int32)(h * chat_window_height_)));
       chat_window_->resize(h2, width() - 1 - w);
-      chat_window_->move_yx(0, w + 1);
+      chat_window_->move_yx(2, w + 1);
       compose_window_->resize(h - 1 - h2, width() - 1 - w);
-      compose_window_->move_yx(h2 + 1, w + 1);
+      compose_window_->move_yx(h2 + 3, w + 1);
     }
     status_line_->resize(1, width());
-    status_line_->move_yx(h, 0);
+    status_line_->move_yx(h + 2, 0);
     command_line_->resize(1, width());
-    command_line_->move_yx(h + 1, 0);
+    command_line_->move_yx(h + 3, 0);
     if (log_window_enabled_) {
-      log_window_->resize(height() - h - 2, width());
-      log_window_->move_yx(h + 2, 0);
+      log_window_->resize(std::max(1, height() - h - 4), width());
+      log_window_->move_yx(h + 4, 0);
     } else {
       log_window_->resize(3, width());
       log_window_->move_yx(new_height, 0);
@@ -86,13 +88,29 @@ class TdcursesLayout
   }
 
   void render_borders(windows::WindowOutputter &rb) override {
-    const auto &borders = get_border_type_info(windows::BorderType::Simple, false);
-    rb.fill_vert_yx(0, dialog_list_window_->width(), borders[0], dialog_list_window_->height());
-    if (compose_window_) {
-      rb.fill_yx(chat_window_->height(), dialog_list_window_->width(), borders[10],
-                 width() - dialog_list_window_->width());
-      rb.putstr_yx(chat_window_->height(), dialog_list_window_->width(), borders[4]);
+    rb.set_bg_color_rgb(windows::ColorRGB(0x172337));
+    rb.set_fg_color(windows::Color::White);
+    rb.fill_yx(0, 0, ' ', width());
+    rb.set_bold(true);
+    if (width() >= 24) rb.putstr_yx(0, 1, "TELEGRAM  /  terminal");
+    rb.unset_bold();
+    if (width() >= 70) {
+      rb.set_fg_color(windows::Color::Aqua);
+      rb.putstr_yx(0, width() - 25, "F1 Help   F7 Settings");
     }
+    rb.unset_bg_color();
+    rb.set_fg_color(windows::Color::Grey);
+    rb.fill_yx(1, 0, ' ', width());
+    rb.putstr_yx(1, 1, "CHATS");
+    if (width() - dialog_list_window_->width() > 18) rb.putstr_yx(1, dialog_list_window_->width() + 3, "CONVERSATION");
+    const auto &borders = get_border_type_info(windows::BorderType::Simple, false);
+    rb.fill_vert_yx(1, dialog_list_window_->width(), borders[0], dialog_list_window_->height() + 1);
+    if (compose_window_) {
+      rb.fill_yx(chat_window_->height() + 2, dialog_list_window_->width(), borders[10],
+                 width() - dialog_list_window_->width());
+      rb.putstr_yx(chat_window_->height() + 2, dialog_list_window_->width(), borders[4]);
+    }
+    rb.unset_fg_color();
   }
 
   void replace_log_window(std::shared_ptr<windows::Window> window) {
@@ -108,6 +126,7 @@ class TdcursesLayout
     replace_window_in(dialog_list_window_, std::move(window));
   }
   void replace_chat_window(std::shared_ptr<windows::Window> window) {
+    if (!window) window = std::make_shared<WelcomeWindow>();
     replace_window_in(chat_window_, std::move(window));
   }
   void replace_compose_window(std::shared_ptr<windows::Window> window) {
@@ -144,6 +163,12 @@ class TdcursesLayout
       return;
     }
 
+    if (info == "T-Tab") {
+      if (active_subwindow().get() == dialog_list_window_.get()) activate_right_window();
+      else activate_left_window();
+      set_need_refresh();
+      return;
+    }
     return windows::WindowLayout::handle_input(info);
   }
 
@@ -185,7 +210,7 @@ class TdcursesLayout
   std::shared_ptr<windows::Window> command_line_;
 
   double dialog_list_window_height_{0.9};
-  double dialog_list_window_width_{0.1};
+  double dialog_list_window_width_{0.28};
   double chat_window_height_{0.8};
 
   void replace_window_in(std::shared_ptr<windows::Window> &old, std::shared_ptr<windows::Window> window,
